@@ -4,7 +4,8 @@ import asyncio
 from youtubesearchpython import VideosSearch
 import yt_dlp
 from dotenv import load_dotenv
-
+import sqlite3
+from contextlib import closing
 
 load_dotenv()
 
@@ -36,6 +37,68 @@ loop_status = {}
 
 # Zum Speichern der Warteschlange für jeden Server
 song_queues = {}
+
+
+# Initialize SQLite database
+def init_db():
+    with closing(sqlite3.connect('playlists.db')) as conn:
+        with conn:
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS playlists (
+                    user_id INTEGER,
+                    playlist_name TEXT,
+                    song_url TEXT,
+                    PRIMARY KEY (user_id, playlist_name, song_url)
+                )
+            ''')
+init_db()
+
+
+def add_playlist(user_id, playlist_name):
+    with closing(sqlite3.connect('playlists.db')) as conn:
+        with conn:
+            # Check if playlist exists
+            cursor = conn.execute('''
+                SELECT 1 FROM playlists 
+                WHERE user_id = ? AND playlist_name = ?
+                LIMIT 1
+            ''', (user_id, playlist_name))
+            if cursor.fetchone():
+                return False
+            # Insert dummy entry to create playlist
+            conn.execute('''
+                INSERT INTO playlists (user_id, playlist_name, song_url)
+                VALUES (?, ?, ?)
+            ''', (user_id, playlist_name, ''))
+            conn.execute('''
+                DELETE FROM playlists 
+                WHERE user_id = ? AND playlist_name = ? AND song_url = ''
+            ''', (user_id, playlist_name))
+            return True
+
+def add_to_playlist(user_id, playlist_name, song_url):
+    with closing(sqlite3.connect('playlists.db')) as conn:
+        with conn:
+            conn.execute('''
+                INSERT OR IGNORE INTO playlists (user_id, playlist_name, song_url)
+                VALUES (?, ?, ?)
+            ''', (user_id, playlist_name, song_url))
+
+def get_playlists(user_id):
+    with closing(sqlite3.connect('playlists.db')) as conn:
+        cursor = conn.execute('''
+            SELECT DISTINCT playlist_name FROM playlists 
+            WHERE user_id = ?
+        ''', (user_id,))
+        return [row[0] for row in cursor.fetchall()]
+
+def get_playlist_songs(user_id, playlist_name):
+    with closing(sqlite3.connect('playlists.db')) as conn:
+        cursor = conn.execute('''
+            SELECT song_url FROM playlists 
+            WHERE user_id = ? AND playlist_name = ?
+        ''', (user_id, playlist_name))
+        return [row[0] for row in cursor.fetchall()]
 
 async def search_youtube(query):
     ydl_opts = {"quiet": True}
@@ -166,14 +229,10 @@ async def on_message(message):
             playlist_name = ' '.join(args[1:])
             user_id = message.author.id
             
-            if user_id not in playlists:
-                playlists[user_id] = {}
-
-            if playlist_name in playlists[user_id]:
-                await message.channel.send(f"Playlist '{playlist_name}' exists already.")
-            else:
-                playlists[user_id][playlist_name] = []
+            if add_playlist(user_id, playlist_name):
                 await message.channel.send(f"Playlist '{playlist_name}' created.")
+            else:
+                await message.channel.send(f"Playlist '{playlist_name}' already exists.")
 
         except Exception as e:
             print(e)
@@ -186,36 +245,27 @@ async def on_message(message):
             user_id = message.author.id
             url = last_suggestion.get(message.channel.id)
 
-            if user_id not in playlists or playlist_name not in playlists[user_id]:
-                await message.channel.send(f"Playlist '{playlist_name}' doesn't exist.")
-                return
-
             if not url:
                 await message.channel.send("No song suggested to add. Use `!suche` to suggest a song first.")
                 return
 
-            # Add the suggested song to the playlist
-            playlists[user_id][playlist_name].append(url)
-            await message.channel.send(f"Added {url} to playlist '{playlist_name}'.")
+            add_to_playlist(user_id, playlist_name, url)
+            await message.channel.send(f"Added song to playlist '{playlist_name}'.")
 
         except Exception as e:
             print(e)
 
-    # View songs in a playlist
     elif any(message.content.startswith(cmd) for cmd in commands["viewplaylist"]):
         try:
             args = message.content.split()
             playlist_name = ' '.join(args[1:])
             user_id = message.author.id
 
-            if user_id not in playlists or playlist_name not in playlists[user_id]:
-                await message.channel.send(f"Playlist '{playlist_name}' doesn't exist.")
+            songs = get_playlist_songs(user_id, playlist_name)
+            if songs:
+                await message.channel.send(f"Playlist '{playlist_name}':\n" + "\n".join(songs))
             else:
-                songs = playlists[user_id][playlist_name]
-                if songs:
-                    await message.channel.send(f"Playlist '{playlist_name}':\n" + "\n".join(songs))
-                else:
-                    await message.channel.send(f"Playlist '{playlist_name}' is empty.")
+                await message.channel.send(f"Playlist '{playlist_name}' doesn't exist or is empty.")
 
         except Exception as e:
             print(e)
@@ -227,26 +277,24 @@ async def on_message(message):
             playlist_name = ' '.join(args[1:])
             user_id = message.author.id
 
-            if user_id not in playlists or playlist_name not in playlists[user_id]:
-                await message.channel.send(f"Playlist '{playlist_name}' doesn't exist.")
+            songs = get_playlist_songs(user_id, playlist_name)
+            if not songs:
+                await message.channel.send(f"Playlist '{playlist_name}' doesn't exist or is empty.")
                 return
 
-            # Get voice client and play the first song
+            # Rest des Codes bleibt gleich...
             voice_client = voice_clients.get(message.guild.id)
             if not voice_client:
                 if message.author.voice and message.author.voice.channel:
-                    playlist_name = ' '.join(args[1:])
                     await message.channel.send(f"Die Playlist {playlist_name} wurde in die Warteschlange hinzugefügt.")
                     voice_client = await message.author.voice.channel.connect()
                     voice_clients[message.guild.id] = voice_client
-                    song_queues[message.guild.id] = []  # Initialize queue
+                    song_queues[message.guild.id] = []
                 else:
                     await message.channel.send("You need to be in a voice channel to play music.")
                     return
 
-            # Queue all songs in the playlist
-            playlist_songs = playlists[user_id][playlist_name]
-            song_queues[message.guild.id].extend(playlist_songs)
+            song_queues[message.guild.id].extend(songs)
 
             if not voice_client.is_playing():
                 first_song = song_queues[message.guild.id].pop(0)
