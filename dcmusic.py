@@ -5,7 +5,8 @@ from youtubesearchpython import VideosSearch
 import yt_dlp
 
 print('bot starts')
-TOKEN = 'your_token_here'
+
+# token = 'your token here'
 intents = discord.Intents.default()
 intents.message_content = True
 intents.reactions = True
