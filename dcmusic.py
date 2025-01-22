@@ -3,10 +3,14 @@ import os
 import asyncio
 from youtubesearchpython import VideosSearch
 import yt_dlp
+from dotenv import load_dotenv
+
+
+load_dotenv()
 
 print('bot starts')
 
-# token = 'your token here'
+TOKEN = os.getenv("DISCORD_TOKEN")
 intents = discord.Intents.default()
 intents.message_content = True
 intents.reactions = True
