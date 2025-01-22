@@ -92,7 +92,8 @@ async def on_message(message):
         "skip": ["!skip", "!nextsong", "!überspringen"],
         "exit": ["!exit", "!leave", "!disconnect"],
         "loop": ["!loop", "!repeat", "!wiederholen"],
-        "ping": ["!ping", "!test", "!hello"]
+        "ping": ["!ping", "!test", "!hello"],
+        'help': ["!help", "!hilfe"]
     }
 
     # Search for a song on YouTube
@@ -113,6 +114,9 @@ async def on_message(message):
 
         except Exception as e:
             print(e)
+
+    elif any(message.content.startswith(cmd) for cmd in commands["help"]):
+        await message.channel.send('look at the documantation at 
     elif any(message.content.startswith(cmd) for cmd in commands["ping"]):
         await message.channel.send("THE BOT IS LIVE!")
         await message.channel.send("JMUSIC since 2023")
