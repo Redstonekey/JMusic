@@ -116,7 +116,7 @@ async def on_message(message):
             print(e)
 
     elif any(message.content.startswith(cmd) for cmd in commands["help"]):
-        await message.channel.send('look at the documantation at 
+        await message.channel.send('look at the documantation at https://github.com/Redstonekey/JMusic')
     elif any(message.content.startswith(cmd) for cmd in commands["ping"]):
         await message.channel.send("THE BOT IS LIVE!")
         await message.channel.send("JMUSIC since 2023")
