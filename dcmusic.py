@@ -6,6 +6,8 @@ import yt_dlp
 from dotenv import load_dotenv
 import sqlite3
 from contextlib import closing
+import subprocess
+import sys
 
 load_dotenv()
 
@@ -353,6 +355,29 @@ async def on_message(message):
                 await message.channel.send("Benutze `!loop on` zum Aktivieren oder `!loop off` zum Deaktivieren.")
         except Exception as e:
             print(e)
+
+
+
+@client.event
+async def on_message(message):
+    if message.author == client.user:
+        return  # Ignore messages from the bot itself
+
+    # Add restart command to the existing command list
+    if message.content.startswith("!restart"):
+        try:
+            # Send a message indicating the bot is restarting
+            await message.channel.send("Bot is restarting...")
+
+            # Restart the bot by executing the script again
+            subprocess.Popen([sys.executable, 'dcmusic.py'])
+
+            # Close the current bot
+            await client.close()
+
+        except Exception as e:
+            print(e)
+
 
 
 
