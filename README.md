@@ -25,6 +25,7 @@ DC Music Bot is a Discord bot that allows users to search for, play, and manage 
 | `!loop on`       | Enable loop mode.                                |
 | `!loop off`      | Disable loop mode.                               |
 | `!ping`          | Check if the bot is online.                      |
+| `!restart`       | Restart the bot.                                 |
 
 ### Playlist Management
 
@@ -40,12 +41,23 @@ DC Music Bot is a Discord bot that allows users to search for, play, and manage 
 1. Clone the repository.
 2. Install the required dependencies:
     ```sh
-    pip install discord.py yt-dlp youtubesearchpython
+    pip install -r requirements.txt
     ```
-3. Replace the `TOKEN` variable in `dcmusic.py` with your Discord bot token.
-4. Run the bot:
+    Or install manually:
     ```sh
-    python dcmusic.py
+    pip install discord.py yt-dlp youtube-search-python python-dotenv
+    ```
+3. Create a `.env` file and add your Discord bot token:
+    ```
+    DISCORD_TOKEN=your_bot_token_here
+    ```
+4. Make sure FFmpeg is installed for audio processing:
+    - Windows: Download from https://ffmpeg.org/download.html
+    - Ubuntu/Debian: `sudo apt update && sudo apt install ffmpeg`
+    - macOS: `brew install ffmpeg`
+5. Run the bot:
+    ```sh
+    python3 dcmusic.py
     ```
 
 ## Usage
@@ -59,6 +71,14 @@ This project is licensed under the MIT License.
 ## Contributing
 
 Feel free to open issues or submit pull requests for any improvements or bug fixes.
+
+## Troubleshooting
+
+If the bot connects to Discord but doesn't respond to commands:
+1. Make sure you have only one `@client.event async def on_message(message):` handler in your code
+2. Check that all commands are properly added to the commands dictionary
+3. Verify FFmpeg is installed for audio playback: `ffmpeg -version`
+4. Ensure all Python dependencies are installed: `pip install discord.py yt-dlp youtube-search-python python-dotenv`
 
 ## Acknowledgements
 
