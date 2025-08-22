@@ -126,7 +126,7 @@ async def play_song(voice_client, url, guild_id):
             asyncio.run_coroutine_threadsafe(play_song(voice_client, url, guild_id), loop)
         else:
             # Wenn die Warteschlange nicht leer ist, spiele den nächsten Song
-            if song_queues[guild_id]:
+            if guild_id in song_queues and song_queues[guild_id]:
                 next_url = song_queues[guild_id].pop(0)
                 asyncio.run_coroutine_threadsafe(play_song(voice_client, next_url, guild_id), loop)
             else:
@@ -158,7 +158,8 @@ async def on_message(message):
         "exit": ["!exit", "!leave", "!disconnect"],
         "loop": ["!loop", "!repeat", "!wiederholen"],
         "ping": ["!ping", "!test", "!hello"],
-        'help': ["!help", "!hilfe"]
+        'help': ["!help", "!hilfe"],
+        'restart': ["!restart"]
     }
 
     # Search for a song on YouTube
@@ -356,15 +357,8 @@ async def on_message(message):
         except Exception as e:
             print(e)
 
-
-
-@client.event
-async def on_message(message):
-    if message.author == client.user:
-        return  # Ignore messages from the bot itself
-
-    # Add restart command to the existing command list
-    if message.content.startswith("!restart"):
+    # Add restart command
+    elif any(message.content.startswith(cmd) for cmd in commands["restart"]):
         try:
             # Send a message indicating the bot is restarting
             await message.channel.send("Bot is restarting...")
