@@ -157,8 +157,9 @@ async def on_message(message):
         "skip": ["!skip", "!nextsong", "!überspringen"],
         "exit": ["!exit", "!leave", "!disconnect"],
         "loop": ["!loop", "!repeat", "!wiederholen"],
-        "ping": ["!ping", "!test", "!hello"],
-        'help': ["!help", "!hilfe"]
+        "ping": ["!ping", "!test", "!hello", "!info"],
+        'help': ["!help", "!hilfe"],
+        "restart": ["!restart"]
     }
 
     # Search for a song on YouTube
@@ -356,15 +357,7 @@ async def on_message(message):
         except Exception as e:
             print(e)
 
-
-
-@client.event
-async def on_message(message):
-    if message.author == client.user:
-        return  # Ignore messages from the bot itself
-
-    # Add restart command to the existing command list
-    if message.content.startswith("!restart"):
+    elif any(message.content.startswith(cmd) for cmd in commands["restart"]):
         try:
             # Send a message indicating the bot is restarting
             await message.channel.send("Bot is restarting...")
@@ -377,8 +370,6 @@ async def on_message(message):
 
         except Exception as e:
             print(e)
-
-
 
 
 client.run(TOKEN)
